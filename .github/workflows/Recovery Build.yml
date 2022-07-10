@@ -26,8 +26,20 @@ on:
       COMMON_TREE_URL:
         description: 'COMMON_TREE_URL (if no common tree, leave blank)'
         required: false
+      COMMON_TREE_BRANCH:
+        description: 'COMMON_TREE_BRANCH (if no common tree, leave blank)'
+        required: false
       COMMON_PATH:
         description: 'COMMON_PATH (if no common tree, leave blank)'
+        required: false
+      KERNEL_TREE_URL:
+        description: 'KERNEL_TREE_URL (if using prebuilts, leave blank)'
+        required: false
+      KERNEL_TREE_BRANCH:
+        description: 'KERNEL_TREE_BRANCH (if using prebuilts, leave blank)'
+        required: false
+      KERNEL_PATH:
+        description: 'KERNEL_PATH (if using prebuilts, leave blank)'
         required: false
       DEVICE_NAME:
         description: 'DEVICE_NAME'
@@ -58,7 +70,7 @@ jobs:
         echo "Device Name: ${{ github.event.inputs.DEVICE_NAME }}"
         echo "Build Target: ${{ github.event.inputs.BUILD_TARGET }}.img"
         echo "::endgroup::"
- 
+
     # You might want to Checkout your repo first, but not mandatory
     - name: Check Out
       uses: actions/checkout@v3
@@ -106,14 +118,14 @@ jobs:
       run: |
         echo "::set-output name=date::$(date +%F)"
       id: var
-      
+
     - name: Install repo
       run: |
         mkdir ~/bin
         curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
         chmod a+x ~/bin/repo
         export PATH=~/bin:$PATH
-      
+
     - name: Initialize repo
       run: |
         PATH=~/bin:$PATH
@@ -124,14 +136,14 @@ jobs:
         git config --global user.email "captainthrowback@hotmail.com"
         repo init --depth=1 -u ${{ github.event.inputs.MANIFEST_URL }} -b ${{ github.event.inputs.MANIFEST_BRANCH }}
       id: pwd
-          
+
     - name: Repo Sync
       run: |
         PATH=~/bin:$PATH
         cd workspace
         repo sync -j$(nproc --all) -f --force-sync
         ls -al
-      
+
     - name: Clone device tree
       run: |
         PATH=~/bin:$PATH
@@ -145,7 +157,17 @@ jobs:
       run: |
         PATH=~/bin:$PATH
         cd ${{ steps.pwd.outputs.pwd }}
-        git clone ${{ github.event.inputs.COMMON_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.COMMON_PATH }}
+        git clone ${{ github.event.inputs.COMMON_TREE_URL }} -b ${{ github.event.inputs.COMMON_TREE_BRANCH }} ./${{ github.event.inputs.COMMON_PATH }}
+
+    - name: Clone kernel tree
+      if: |
+        github.event.inputs.KERNEL_TREE_URL != null
+        && github.event.inputs.KERNEL_PATH != null
+        && github.event.inputs.KERNEL_TREE_BRANCH != null
+      run: |
+        PATH=~/bin:$PATH
+        cd ${{ steps.pwd.outputs.pwd }}
+        git clone ${{ github.event.inputs.KERNEL_TREE_URL }} -b ${{ github.event.inputs.KERNEL_TREE_BRANCH }} ./${{ github.event.inputs.KERNEL_PATH }}
 
     - name: Sync Device Dependencies - AOSP
       if: |
